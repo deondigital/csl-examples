@@ -1,0 +1,27 @@
+type Currency
+  | USD
+  | EUR
+  | CHF
+
+val eqCurrency =
+  \USD -> (\USD -> True | _ -> False)
+  |EUR -> (\EUR -> True | _ -> False)
+  |CHF -> (\CHF -> True | _ -> False)
+
+type Money: ResourceType{
+  currency: Currency
+}
+
+type Payment: Transfer{}
+
+val paymentCurrencyIs = \(rt: ResourceType) -> \currency ->
+  type x = rt of {
+    Money -> eqCurrency x.currency currency;
+    _ -> False
+  }
+
+val expectedPaymentAmount =
+  \(p:Payment) -> \amount -> \currency ->
+    p.resource.quantity = amount &&
+    paymentCurrencyIs p.resource.resourceType currency
+

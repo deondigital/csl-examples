@@ -1,0 +1,35 @@
+type ResourceType {}
+
+type Resource {
+  quantity: Int,
+  resourceType: ResourceType
+}
+
+type ResourceEvent: Event {
+  resource: Resource
+}
+
+type Transfer: ResourceEvent {
+  sender: Agent,
+  receiver: Agent
+}
+
+type Commit: ResourceEvent {}
+
+type Spend: ResourceEvent {}
+
+// List Event -> List ResourceEvent
+val resourceEvents =
+  List::mapMaybe (\(e:Event) ->
+    type x = e of {
+      ResourceEvent -> Some x;
+      _ -> None
+    })
+
+// List Event -> List Transfer
+val transfers =
+  List::mapMaybe (\(e:Event) ->
+    type x = e of {
+      Transfer -> Some x;
+      _ -> None
+    })

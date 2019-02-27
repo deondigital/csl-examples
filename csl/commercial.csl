@@ -1,0 +1,46 @@
+type Delivery: Transfer{}
+
+type Goods: ResourceType{
+  item: String
+}
+
+val expectedGoodsDelivery =
+  \(d:Delivery) -> \qty -> \unit ->
+    d.resource.quantity = qty &&
+    type x = d.resource.resourceType of {
+      Goods -> x.item = unit;
+      _ -> False
+    }
+
+type DamageClaim: Event { claim: String }
+type DenyClaim: Event {}
+
+template ClaimForDamages(seller, buyer, price, deliveryTime) =
+  let val noticeDeadline = DateTime::addDays deliveryTime 2 in
+  <buyer> n:DamageClaim where
+    n.timestamp <= noticeDeadline
+  then
+  let val sellerDeadline = DateTime::addDays n.timestamp 2 in
+  <seller> p:Payment where
+    p.sender = seller &&
+    p.receiver = buyer &&
+    expectedPaymentAmount p (price /2) USD &&
+    p.timestamp <= sellerDeadline
+  or
+  <seller> d:DenyClaim where d.timestamp <= sellerDeadline
+
+template Sale(seller, buyer, price, currency, qty, goods, paymentDeadline) =
+  <buyer> p:Payment where
+    p.sender = buyer &&
+    p.receiver = seller &&
+    expectedPaymentAmount p price currency &&
+    p.timestamp <= paymentDeadline then
+  <seller> d:Delivery where
+    d.sender = seller &&
+    d.receiver = buyer &&
+    expectedGoodsDelivery d qty goods &&
+    d.timestamp <= DateTime::addDays p.timestamp 2 then (
+      ClaimForDamages(seller, buyer, price, d.timestamp)
+      or
+      success)
+

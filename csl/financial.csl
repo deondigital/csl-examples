@@ -1,0 +1,56 @@
+
+// Simple Zero-Coupon-Bond
+template ZCB(buyer, seller, faceValue, currency, maturity) =
+  <seller> p: Payment where
+    p.timestamp = maturity &&
+    p.sender = seller &&
+    p.receiver = seller &&
+    expectedPaymentAmount p faceValue currency
+
+// Contract modelling purchase on ZCB
+template BuyZCB(buyer, seller, discountValue, faceValue, currency, maturity) =
+  <buyer> p: Payment where
+    p.sender = buyer &&
+    p.receiver = seller &&
+    expectedPaymentAmount p discountValue currency
+  then
+  ZCB(buyer, seller, faceValue, currency, maturity)
+
+// As per "How to write a financial contract", a European option contract gives
+// the holder the right to choose, at a particular date, whether or not to acquire an
+// "underlying" contract:
+// european t u = when (at t) (u or zero)
+type Acquire: Event{}
+
+template [underlying] European(maturity, holder) =
+  // Exactly at the specified time, the agent 'holder'
+  // may submit the 'Acquire'-event, thus entering into
+  // the template-contract `underlying`
+  (
+    <holder> a:Acquire where a.timestamp = maturity
+    then
+    underlying
+  )
+  or
+  success
+
+// Anytime between `start` and `end`, `holder` may decide
+// to `Acquire` the `underlying` contract.
+template [underlying] American(start, end, holder) =
+  (
+    <holder> a:Acquire where
+      start < a.timestamp &&
+      a.timestamp < end
+    then
+    underlying
+  )
+  or
+  success
+
+template EuroZCB(buyer, seller, deadline, maturity) =
+  // buyer has the right to acquire the ZCB
+  // at deadline
+  let
+    contract zcb = ZCB(buyer, seller, 100, USD, maturity)
+  in
+    European[zcb](deadline, buyer)
