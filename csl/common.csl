@@ -1,0 +1,4 @@
+val for = \ls -> \f -> \init -> foldl (\acc -> \x -> f x acc) init ls
+val from = \x -> \f -> f x
+val skip = id
+val comp = \f -> \g -> \x -> g(f x)
